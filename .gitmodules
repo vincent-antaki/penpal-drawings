@@ -1,0 +1,9 @@
+[submodule "core"]
+	path = core
+	url = git@github.com:vincent-antaki/penpal-core.git
+[submodule "projects/001_hello_world"]
+	path = projects/001_hello_world
+	url = git@github.com:vincent-antaki/penpal-project-001-hello-world.git
+[submodule "app"]
+	path = app
+	url = git@github.com:vincent-antaki/penpal-app.git
