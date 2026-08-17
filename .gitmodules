@@ -7,3 +7,9 @@
 [submodule "app"]
 	path = app
 	url = git@github.com:vincent-antaki/penpal-app.git
+[submodule "projects/002-irregular-triangle-grid"]
+	path = projects/002-irregular-triangle-grid
+	url = git@github.com:vincent-antaki/penpal-project-002-irregular-triangle-grid.git
+[submodule "projects/003-restless-grid"]
+	path = projects/003-restless-grid
+	url = git@github.com:vincent-antaki/penpal-project-003-restless-grid.git

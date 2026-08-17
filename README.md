@@ -1,61 +1,126 @@
-# Penpal: Creative Coding Monorepo
+# Penpal
 
-Penpal is a Python-based creative coding environment designed for generating SVGs for pen plotters. It provides a structured workflow to ensure reproducible, version-controlled, and parameterized generative art.
+A Python creative coding environment for generating SVGs for pen plotters. Built for reproducible, version-controlled, parameterized generative art.
 
-## Directory Structure
+<div align="center">
 
-- **`core/`**: Shared utilities, drawing abstractions, and math tools (managed via `uv`).
-- **`app/`**: Streamlit-based web dashboard to view SVG outputs, parameters, and Git hashes.
-- **`tools/`**: Utility scripts, primarily `runner.py`, for executing sketches.
-- **`projects/`**: Directory containing individual sketches (e.g., `001_hello_world`).
+<img src="assets/002/1dbdb63d.png" alt="Irregular Triangle Grid" width="900">
 
-## Projects Architecture
+<img src="assets/002/d695529b.png" alt="Irregular Triangle Grid" width="600">
 
-Each sketch in `projects/` is an independent system utilizing monorepo tooling. 
-Every project **MUST** be its own Git repository. The runner relies on Git to snapshot code state for reproducibility.
+<img src="assets/003/b55b7005.png" alt="The Restless Grid" width="900">
 
-A typical project contains:
-- `main.py`: The entry point defining `run(params, output_path)` to generate an SVG.
-- `params.py`: Defines parameter ranges or specific configurations for `main.py`.
+</div>
+
+## Quick Start
+
+**Prerequisites:** Python 3.10+, [uv](https://github.com/astral-sh/uv), Git
+
+```bash
+# Install dependencies
+uv sync
+
+# Run your first sketch (dev mode skips Git checks)
+python tools/runner.py 001_hello_world --dev
+
+# Browse results in the gallery
+cd app && ./launch.sh
+```
+
+## Project Structure
+
+```
+penpal/
+├── core/          # Shared library (drawing, math, vpype)
+├── app/           # Streamlit gallery — browse SVGs, params, Git hashes
+├── tools/         # runner.py, plotter utilities (send_hpgl.py, plotter_prep.sh)
+├── projects/      # Each sketch is its own Git repo
+├── experiments/   # Parameter files (default.py, default.json, example.json)
+└── gallery/       # Generated outputs
+    └── <project>/
+        ├── svg/<git-hash>/     # Production runs
+        └── test/<timestamp>/   # Dev runs
+```
 
 ## Running Sketches
 
-Execute sketches via `tools/runner.py`, which uses `uv` for environment management.
+The `tools/runner.py` script handles execution with full reproducibility:
 
-### Standard Run
-Enforces version control and requires a clean Git state. Outputs save to the configured gallery under `<gallery-dir>/<project-id>/svg/<git-hash>/`. Use `--auto-commit` to automatically commit before running.
 ```bash
+# Standard run — requires clean Git state, saves to gallery/<project>/svg/<git-hash>/
 python tools/runner.py 001_hello_world
-```
 
-### Development / Test Run
-Skips Git checks and saves to `<gallery-dir>/<project-id>/test/<timestamp>/`.
-```bash
+# Dev run — skips Git checks, saves to gallery/<project>/test/<timestamp>/
 python tools/runner.py 001_hello_world --dev
+
+# Custom parameters (overrides all files)
+python tools/runner.py 001_hello_world --dev --params '{"seed": 42, "num_lines": 200}'
+
+# Use a named parameter file from experiments/<project>/
+python tools/runner.py 001_hello_world --dev --param-file my_variant
+
+# Auto-commit before running (convenience for WIP)
+python tools/runner.py 001_hello_world --auto-commit
 ```
 
-### Custom Parameters
-Override `params.py` by providing a JSON string:
+### Parameter Resolution (highest priority first)
+
+1. `--params '{"key": "value"}'` — inline JSON
+2. `--param-file name` — loads `experiments/<project>/name.py` or `name.json`
+3. `experiments/<project>/default.py` or `default.json`
+4. `<project>/example.json` — fallback bundled with the sketch
+
+Each run saves a JSON sidecar with timestamp, Git hash, parameter hash, and the full parameter set.
+
+## Creating a New Sketch
+
 ```bash
-python tools/runner.py 001_hello_world --dev --params '{"seed": 42, "lines": 100}'
+mkdir projects/005_my_sketch && cd $_
+git init
+uv init
+uv add penpal-core  # or: uv add ../core
 ```
 
-## Streamlit Dashboard
+Required files:
+- `main.py` — defines `run(params: dict, output_path: str)`
+- `example.json` — sample parameter set
 
-View generated SVGs, parameters, and Git hashes:
+Add parameter variants in `experiments/005_my_sketch/` as `default.py`, `default.json`, or custom names.
+
+## Gallery (Streamlit App)
+
 ```bash
 cd app
 ./launch.sh
-# Or: uv run streamlit run app.py
+# or: uv run python -m streamlit run main.py
 ```
-The dashboard allows browsing production runs and testing new parameter configurations interactively.
 
-## SVG Conversion
+Two modes:
+- **Regular** — production runs with Git history
+- **Test** — dev runs; edit parameters inline and re-run from the UI
 
-- [vpype](https://github.com/abey79/vpype) handles post-processing for plotters.
+Config priority: CLI args → env vars (`PENPAL_GALLERY_DIR`, `PENPAL_PROJECT_DIR`, `PENPAL_RUNNER_SCRIPT_PATH`) → defaults.
 
-## Prerequisites
+## Plotter Pipeline
 
-- Python 3.10+
-- [uv](https://github.com/astral-sh/uv)
-- Git
+1. **vpype** — optimizes SVGs for plotting (sort, simplify, linesort). See `tools/plotter_prep.sh`.
+2. **send_hpgl.py** — streams HPGL to serial (tested with HP 7475A).
+
+```bash
+# Example: optimize then send
+vpype read output.svg linesort write optimized.svg
+python tools/send_hpgl.py optimized.svg /dev/ttyUSB0
+```
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| "Git repo not clean" | Commit changes, or use `--auto-commit` / `--dev` |
+| "Not a Git repository" | Run `git init` inside the project folder |
+| Module import errors | Run `uv sync` in the project directory |
+| "main.py must define run()" | Ensure `def run(params, output_path):` exists |
+
+## License
+
+MIT
